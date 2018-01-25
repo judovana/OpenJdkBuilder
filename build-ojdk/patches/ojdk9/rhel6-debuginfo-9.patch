@@ -1,0 +1,63 @@
+diff -r d302cf2436c5 src/share/vm/services/classLoadingService.cpp
+--- jdk8/hotspot/src/share/vm/oops/methodCounters.hpp
++++ jdk8/hotspot/src/share/vm/oops/methodCounters.hpp
+@@ -116,7 +116,7 @@
+ 
+   AOT_ONLY(Method* method() const { return _method; })
+ 
+-  static int size() { return sizeof(MethodCounters) / wordSize; }
++  static int size() { return align_size_up(sizeof(MethodCounters), wordSize) / wordSize; }
+ 
+   bool is_klass() const { return false; }
+ 
+--- jdk8/hotspot/src/share/vm/oops/instanceKlass.cpp	Mon Mar 27 06:18:28 2017 -0400
++++ jdk8/hotspot/src/share/vm/oops/instanceKlass.cpp	Mon Apr 03 13:04:30 2017 +0200
+@@ -699,6 +699,11 @@
+   }
+ }
+ 
++#ifdef AARCH64
++#pragma GCC push_options
++#pragma GCC optimize ("O0")
++#endif
++
+ void InstanceKlass::initialize_impl(instanceKlassHandle this_k, TRAPS) {
+   // Make sure klass is linked (verified) before initialization
+   // A class could already be verified, since it has been reflected upon.
+@@ -845,6 +850,10 @@
+   DTRACE_CLASSINIT_PROBE_WAIT(end, this_k(), -1,wait);
+ }
+ 
++#ifdef AARCH64
++#pragma GCC pop_options
++#endif
++
+ 
+ // Note: implementation moved to static method to expose the this pointer.
+ void InstanceKlass::set_initialization_state_and_notify(ClassState state, TRAPS) {
+
+diff -r d302cf2436c5 src/share/vm/services/classLoadingService.cpp
+--- jdk8/hotspot/src/share/vm/services/classLoadingService.cpp	Thu Jun 23 17:58:59 2016 +0000
++++ jdk8/hotspot/src/share/vm/services/classLoadingService.cpp	Fri Mar 31 14:35:43 2017 +0100
+@@ -119,6 +119,11 @@
+   }
+ }
+
++#ifdef AARCH64
++#pragma GCC push_options
++#pragma GCC optimize ("O0")
++#endif
++
+ void ClassLoadingService::notify_class_unloaded(InstanceKlass* k) {
+   DTRACE_CLASSLOAD_PROBE(unloaded, k, false);
+   // Classes that can be unloaded must be non-shared
+@@ -160,6 +165,10 @@
+   }
+ }
+
++#ifdef AARCH64
++#pragma GCC pop_options
++#endif
++
+ size_t ClassLoadingService::compute_class_size(InstanceKlass* k) {
+   // lifted from ClassStatistics.do_class(Klass* k)

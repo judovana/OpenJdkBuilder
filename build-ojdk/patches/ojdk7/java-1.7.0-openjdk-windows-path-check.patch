@@ -1,0 +1,20 @@
+--- openjdk/jdk/make/jdk_generic_profile.sh
++++ openjdk/jdk/make/jdk_generic_profile.sh
+@@ -214,7 +214,7 @@
+   #   NOTE: CYGWIN has a link.exe too, make sure the compilers are first
+ 
+   # Use supplied vsvars.sh
+-  repo=`hg root`
++  repo='/cygdrive/r/openjdk'
+   if [ -f "${repo}/make/scripts/vsvars.sh" ] ; then
+     eval `sh ${repo}/make/scripts/vsvars.sh -v10`
+   elif [ -f "${repo}/../make/scripts/vsvars.sh" ] ; then
+@@ -241,7 +241,7 @@
+ fi
+ 
+ # Export PATH setting
+-PATH="${path4sdk}"
++PATH="${PATH};${path4sdk}"
+ export PATH
+ 
+ # Export variables required for Zero

@@ -1,0 +1,6 @@
+changeset:   {rev}:{node|short}
+{if(tags, 'tag:         {tags}\n')}{if(parents, indent(sub(' ','\n',parents),'parent:      '))}user:        {author}
+date:        {date(date) }
+summary:     {desc|firstline}
+{indent(desc,'description: ')}
+

@@ -1,0 +1,12 @@
+# Creates complete script needed to build openjdk.
+#   extra_build_args - used to set extra build params. Can be empty.
+# Script must be runnable from any folder. CWD is used as buildroot - "sh [path_to_script]/build.sh".
+# Script should accept argument pass source dir. When not provided, default dir is used ({ramdisk}/openjdk).
+function generateBuildScript(extra_build_args: string)
+
+# Installs all system dependencies needed to build openjdk.
+# Must work on linux and windows
+function installBuildDeps()
+
+# Prints dir where final image is built relative to buildroot. This dir will be archived.
+function getImageDir()

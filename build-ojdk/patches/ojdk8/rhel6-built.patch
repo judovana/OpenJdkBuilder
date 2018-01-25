@@ -1,0 +1,56 @@
+--- jdk8/common/autoconf/configure.ac
++++ jdk8/common/autoconf/configure.ac
+@@ -30,7 +30,7 @@
+ ###############################################################################
+ 
+ 
+-AC_PREREQ([2.69])
++AC_PREREQ([2.63])
+ AC_INIT(OpenJDK, jdk8, build-dev@openjdk.java.net,,http://openjdk.java.net)
+ 
+ AC_CONFIG_AUX_DIR([build-aux])
+--- jdk8/common/autoconf/libraries.m4
++++ jdk8/common/autoconf/libraries.m4
+@@ -745,15 +745,15 @@
+   # statically link libstdc++ before C++ ABI is stablized on Linux unless
+   # dynamic build is configured on command line.
+   #
+-  AC_ARG_WITH([stdc++lib], [AS_HELP_STRING([--with-stdc++lib=<static>,<dynamic>,<default>],
++  AC_ARG_WITH([stdcpplib], [AS_HELP_STRING([--with-stdcpplib=<static>,<dynamic>,<default>],
+       [force linking of the C++ runtime on Linux to either static or dynamic, default is static with dynamic as fallback])],
+       [
+-        if test "x$with_stdc__lib" != xdynamic && test "x$with_stdc__lib" != xstatic \
+-                && test "x$with_stdc__lib" != xdefault; then
+-          AC_MSG_ERROR([Bad parameter value --with-stdc++lib=$with_stdc__lib!])
++        if test "x$with_stdcpplib" != xdynamic && test "x$with_stdcpplib" != xstatic \
++                && test "x$with_stdcpplib" != xdefault; then
++          AC_MSG_ERROR([Bad parameter value --with-stdcpplib=$with_stdcpplib!])
+         fi
+       ],
+-      [with_stdc__lib=default]
++      [with_stdcpplib=default]
+   )
+ 
+   if test "x$OPENJDK_TARGET_OS" = xlinux; then
+@@ -789,18 +789,18 @@
+       AC_MSG_ERROR([Cannot link to stdc++, neither dynamically nor statically!])
+     fi
+ 
+-    if test "x$with_stdc__lib" = xstatic && test "x$has_static_libstdcxx" = xno; then
++    if test "x$with_stdcpplib" = xstatic && test "x$has_static_libstdcxx" = xno; then
+       AC_MSG_ERROR([Static linking of libstdc++ was not possible!])
+     fi
+ 
+-    if test "x$with_stdc__lib" = xdynamic && test "x$has_dynamic_libstdcxx" = xno; then
++    if test "x$with_stdcpplib" = xdynamic && test "x$has_dynamic_libstdcxx" = xno; then
+       AC_MSG_ERROR([Dynamic linking of libstdc++ was not possible!])
+     fi
+ 
+     AC_MSG_CHECKING([how to link with libstdc++])
+     # If dynamic was requested, it's available since it would fail above otherwise.
+     # If dynamic wasn't requested, go with static unless it isn't available.
+-    if test "x$with_stdc__lib" = xdynamic || test "x$has_static_libstdcxx" = xno || test "x$JVM_VARIANT_ZEROSHARK" = xtrue; then
++    if test "x$with_stdcpplib" = xdynamic || test "x$has_static_libstdcxx" = xno || test "x$JVM_VARIANT_ZEROSHARK" = xtrue; then
+       LIBCXX="$LIBCXX -lstdc++"
+       LDCXX="$CXX"
+       STATIC_CXX_SETTING="STATIC_CXX=false"

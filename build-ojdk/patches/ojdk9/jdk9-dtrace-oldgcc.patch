@@ -1,0 +1,33 @@
+diff --git a/src/share/vm/oops/instanceKlass.cpp b/src/share/vm/oops/instanceKlass.cpp
+--- openjdk/hotspot/src/share/vm/oops/instanceKlass.cpp
++++ openjdk/hotspot/src/share/vm/oops/instanceKlass.cpp
+@@ -98,7 +98,7 @@
+       len = name->utf8_length();                                 \
+     }                                                            \
+     HOTSPOT_CLASS_INITIALIZATION_##type(                         \
+-      data, len, (clss)->class_loader(), thread_type);           \
++      data, len, (void*)(clss)->class_loader(), thread_type);    \
+   }
+ 
+ #define DTRACE_CLASSINIT_PROBE_WAIT(type, clss, thread_type, wait) \
+@@ -111,7 +111,7 @@
+       len = name->utf8_length();                                 \
+     }                                                            \
+     HOTSPOT_CLASS_INITIALIZATION_##type(                         \
+-      data, len, (clss)->class_loader(), thread_type, wait);     \
++      data, len, (void*)(clss)->class_loader(), thread_type, wait);     \
+   }
+ 
+ #else //  ndef DTRACE_ENABLED
+diff --git a/src/share/vm/services/classLoadingService.cpp b/src/share/vm/services/classLoadingService.cpp
+--- openjdk/hotspot/src/share/vm/services/classLoadingService.cpp
++++ openjdk/hotspot/src/share/vm/services/classLoadingService.cpp
+@@ -53,7 +53,7 @@
+       len = name->utf8_length();                    \
+     }                                               \
+     HOTSPOT_CLASS_##type( /* type = unloaded, loaded */ \
+-      data, len, (clss)->class_loader(), (shared)); \
++      data, len, (void*)(clss)->class_loader(), (shared)); \
+   }
+ 
+ #else //  ndef DTRACE_ENABLED
