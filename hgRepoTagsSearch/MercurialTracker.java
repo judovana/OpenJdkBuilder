@@ -77,6 +77,9 @@ public class MercurialTracker {
         //args = new String[]{"/home/jvanek/Desktop/jdks/clonned/java-1.8.0-openjdk-aarch64-shenandoah", switch_verbose, switch_tiptags};
         //args = new String[]{"/home/jvanek/Desktop/jdks/clonned/java-1.8.0-openjdk-dev"};
         //args = new String[]{"/home/jvanek/Desktop/jdks/clonned/java-9-openjdk"};
+        //args = new String[]{"/home/jvanek/hg/jdk9u"};
+        //args = new String[]{"/home/jvanek/git/openj9-openjdk-jdk9", switch_verbose, switch_tiptags};
+        //args = new String[]{"/home/jvanek/git/openj9-openjdk-jdk9"};
 
         if (args == null || args.length == 0) {
             System.out.println("You must specify hg repo/forest to scan. If forest, then you should have the individuall trees synchronised");
@@ -147,7 +150,7 @@ public class MercurialTracker {
             }
         }
         if (mainDir == null) {
-            throw new RuntimeException("No mercurial directory specified!");
+            throw new RuntimeException("No mercurial/git directory specified!");
         }
         File topHg = new File(mainDir);
         if (tiptags) {
@@ -297,7 +300,9 @@ public class MercurialTracker {
         File[] subrepos = topHg.listFiles(new FileFilter() {
             @Override
             public boolean accept(File pathname) {
-                return pathname.isDirectory() && Arrays.asList(pathname.list()).contains(".hg");
+                return pathname.isDirectory()
+                        && (Arrays.asList(pathname.list()).contains(".hg")
+                        || Arrays.asList(pathname.list()).contains(".git"));
             }
         });
         return subrepos;
@@ -406,38 +411,57 @@ public class MercurialTracker {
 
         private final File repo;
         private List<LogItem> log;
+        private final LogWalkerFactory factory;
 
         public RepoWalker(File arg) {
             repo = arg;
+            if (new File(repo, ".hg").exists()) {
+                factory = new HgLogWalkerFactory(repo);
+            } else if (new File(repo, ".git").exists()) {
+                factory = new GitLogWalkerFactory(repo);
+            } else {
+                throw new RuntimeException(repo + " is not hg/git repository");
+            }
         }
 
         private int walkHgLog() throws IOException, InterruptedException, ParseException {
-            ProcessBuilder b = new ProcessBuilder("hg", "log");
-            b.directory(repo);
-            Process p = b.start();
+            Process p = factory.createLogProcess();
             InputStream os = p.getInputStream();
-            log = walkStreamOfHgLog(os);
+            log = walkStreamOfHgLog(os, factory);
             return p.waitFor();
         }
 
-        private static List<LogItem> walkStreamOfHgLog(InputStream os) throws IOException, ParseException {
+        private static List<LogItem> walkStreamOfHgLog(InputStream os, LogWalkerFactory factory) throws IOException, ParseException {
             List<LogItem> log = new ArrayList<>();
             BufferedReader br = new BufferedReader(new InputStreamReader(os, "utf-8"));
             LogItem currentLogItem = null;
+            if (factory instanceof GitLogWalkerFactory) {
+                //fake tip
+                currentLogItem = factory.createLogItem();
+                log.add(currentLogItem);
+                currentLogItem.addLine("commit faketip (tag: " + TIP_MARKER + ")");
+                currentLogItem.addLine("Author: jvanek");
+                currentLogItem.addLine("Date: Mon Jan 1 01:01:01 2222 -0100");
+                currentLogItem.addLine("    nmercurial tag is changeset, in git not");
+            }
             while (true) {
                 String s = br.readLine();
                 if (s == null) {
                     break;
                 }
-                if (s.trim().isEmpty() || currentLogItem == null) {
-                    if (currentLogItem != null && currentLogItem.changeset.id == 0) {
-                        //exiting on first logln, as mercurial logln is ending with empty space and we do nto wont tohave it added
-                        break;
+                if (s.trim().isEmpty()) {
+                    if (factory instanceof HgLogWalkerFactory) {
+                        if (currentLogItem != null && currentLogItem.changeset.id == 0) {
+                            //exiting on first logln, as mercurial logln is ending with empty space and we do nto wont tohave it added
+                            break;
+                        }
                     }
-                    currentLogItem = new LogItem();
-                    log.add(currentLogItem);
                 }
                 if (!s.trim().isEmpty()) {
+                    if (factory.invokeLineNewItem(s)) {
+                        currentLogItem = factory.createLogItem();
+                        log.add(currentLogItem);
+                    }
                     boolean wasChangesetId = currentLogItem.addLine(s);
                     if (wasChangesetId) {
                         //for all items except first
@@ -448,12 +472,13 @@ public class MercurialTracker {
                             if (lastLogItem.parents.isEmpty()) {
                                 lastLogItem.parents.add(currentLogItem.changeset);
                             }
-                            //log(lastLogItem);
                         }
                     }
                 }
             }
-            //log(currentLogItem);
+//            for (LogItem logItem : log) {
+//                System.out.println(logItem.toString());
+//            }
             return log;
         }
 
@@ -611,22 +636,68 @@ public class MercurialTracker {
 
     }
 
-    private static class LogItem {
+    private static class GitLogItem extends LogItem {
+//        mercurial 
+//        date:        Thu Mar 13 16:12:15 2008 -0700
+//        private final SimpleDateFormat df = new SimpleDateFormat("EEE MMM dd HH:mm:ss yyyy ZZZZZ");
+//        git
+//        Date:        Fri Aug 4 00:30:20 2017 -0400        
 
         private final SimpleDateFormat df = new SimpleDateFormat("EEE MMM dd HH:mm:ss yyyy ZZZZZ");
-        private ChangesetId changeset;
-        private String tag;
-        private String user;
-        private String date;
-        private Date dateParsed;
-        private String summary;
-        private String branch = DEFAULT_BRANCH;
-        //ususally 1-2 parents, no more, no less?
-        private final List<ChangesetId> parents = new ArrayList<>(1);
-        private final List<LogItem> parentPointers = new ArrayList<>(2);
-        private final List<LogItem> childrenPointers = new ArrayList<>();
 
-        public LogItem() {
+        @Override
+        public boolean addLine(String s) throws ParseException {
+            String sr = s.replaceAll("^commit ", "commit: ").replace("    ", "summary: ");
+            String[] ss = sr.split(":\\s+");
+            switch (ss[0]) {
+                case "commit":
+                    //merges are printed as"1631c1cd39" only so...
+                    String truncated = ss[1].substring(0, 10);
+                    changeset = new ChangesetId("0:" + truncated);
+                    if (s.contains("tag")) {
+                        tag = ss[2].replaceAll(",\\s+.*", "").replaceAll(".*/", "").replaceAll("\\).*", "");
+                    }
+                    return true;
+                case "Merge":
+                    String[] sss = ss[1].split("\\s+");
+                    parents.add(new ChangesetId("0:" + sss[0]));
+                    parents.add(new ChangesetId("0:" + sss[1]));
+                    return false;
+                case "Author":
+                    user = ss[1];
+                    return false;
+                case "Date":
+                    date = ss[1];
+                    dateParsed = df.parse(date);
+                    return false;
+                case "summary":
+                    if (summary == null) {
+                        //recording only first line
+                        summary = ss[1];
+                    }
+                    return false;
+//                case "branch":
+//                    branch = ss[1];
+//                    return false;
+                default:
+                    throw new RuntimeException("Unknow command of " + ss[1] + " in " + s);
+            }
+        }
+
+        @Override
+        protected SimpleDateFormat getDF() {
+            return df;
+        }
+
+    }
+
+    private static class HgLogItem extends LogItem {
+
+        private final SimpleDateFormat df = new SimpleDateFormat("EEE MMM dd HH:mm:ss yyyy ZZZZZ");
+
+        @Override
+        protected SimpleDateFormat getDF() {
+            return df;
         }
 
         /**
@@ -635,7 +706,8 @@ public class MercurialTracker {
          * @return true, if the parameter was changeset identificator, otherwise
          * false
          */
-        private boolean addLine(String s) throws ParseException {
+        @Override
+        public boolean addLine(String s) throws ParseException {
             String[] ss = s.split(":\\s+");
             switch (ss[0]) {
                 case "changeset":
@@ -665,6 +737,35 @@ public class MercurialTracker {
             }
 
         }
+
+    }
+
+    private static abstract class LogItem {
+
+        protected ChangesetId changeset;
+        protected String tag;
+        protected String user;
+        protected String date;
+        protected Date dateParsed;
+        protected String summary;
+        protected String branch = DEFAULT_BRANCH;
+        //ususally 1-2 parents, no more, no less?
+        protected final List<ChangesetId> parents = new ArrayList<>(1);
+        protected final List<LogItem> parentPointers = new ArrayList<>(2);
+        protected final List<LogItem> childrenPointers = new ArrayList<>();
+
+        public LogItem() {
+        }
+
+        /**
+         *
+         * @param s line to parse
+         * @return true, if the parameter was changeset identificator, otherwise
+         * false
+         */
+        abstract public boolean addLine(String s) throws ParseException;
+
+        abstract protected SimpleDateFormat getDF();
 
         @Override
         public String toString() {
@@ -1019,7 +1120,7 @@ public class MercurialTracker {
         Then, based on positions of known "main numbers"  comapre those known values (major jdk, version, build)
         If the rep have more typs of tags, the "strange ones" ( must take priority (aarch64, shenandoah dates, icedteas...)
         Those cen be weighted?
-        */
+         */
         if (o1 == null && o2 == null) {
             return 0;
         }
@@ -1311,6 +1412,71 @@ public class MercurialTracker {
             return o1;
         }
         return oo1[0];
+    }
+
+    private static interface LogWalkerFactory {
+
+        public Process createLogProcess() throws IOException;
+
+        public LogItem createLogItem();
+
+        public boolean invokeLineNewItem(String s);
+    }
+
+    private static class HgLogWalkerFactory implements LogWalkerFactory {
+
+        private final File repo;
+
+        public HgLogWalkerFactory(File repo) {
+            this.repo = repo;
+        }
+
+        @Override
+        public Process createLogProcess() throws IOException {
+            ProcessBuilder b = new ProcessBuilder("hg", "log");
+            b.directory(repo);
+            return b.start();
+        }
+
+        @Override
+        public LogItem createLogItem() {
+            return new HgLogItem();
+
+        }
+
+        @Override
+        public boolean invokeLineNewItem(String s) {
+            return s.startsWith("changeset:");
+        }
+
+    }
+
+    private static class GitLogWalkerFactory implements LogWalkerFactory {
+
+        private final File repo;
+
+        public GitLogWalkerFactory(File repo) {
+            this.repo = repo;
+        }
+
+        @Override
+        public Process createLogProcess() throws IOException {
+            ProcessBuilder b = new ProcessBuilder("git", "log", "--decorate=full");
+            b.directory(repo);
+            return b.start();
+        }
+
+        @Override
+        public LogItem createLogItem() {
+            return new GitLogItem();
+
+        }
+
+        @Override
+        public boolean invokeLineNewItem(String s) {
+            return s.startsWith("commit ");
+        }
+
     }
 
 }
