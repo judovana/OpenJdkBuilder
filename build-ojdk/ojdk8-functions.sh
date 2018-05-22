@@ -3,7 +3,7 @@ function prepareBuildArgs() {
   WIN_DEPS=
   DEBUG_OPTS=
   STATIC_OPTS=
-  BUILD_OPTS="--with-boot-jdk=/usr/lib/jvm/java --enable-unlimited-crypto"
+  BUILD_OPTS="--with-boot-jdk=${BOOTJDK_DIR} --enable-unlimited-crypto"
   BUILD_OPTS="${BUILD_OPTS} $@"
 
   if [[ ${SOURCE_ARCHIVE} = *.fastdebug.* ]] ; then
@@ -61,17 +61,9 @@ function installBuildDeps() {
   fi
 
   if isWindows; then
-    pushd /mnt/shared/jdk-images/windows_build_deps
-    $COMMAND /i *.msi INSTALLDIR="c:\cygwin64\usr\lib\jvm\java" /quiet /Lv* c:\\javainstall.log
-
-    # cygwin has /usr/lib just like symbolic link to /lib and windows path c:/cygwin64/usr does not exist.
-    # We need both to exist because openjdk build first check whether boot java exists and then translate the path to windows path.
-    mkdir -p /usr/lib/jvm && rm -rf /usr/lib/jvm/java && ln -s /cygdrive/c/cygwin64/usr/lib/jvm/java /usr/lib/jvm/java
-
     cp -r /mnt/shared/jdk-images/windows_build_deps/freetype-lib /home/tester/freetype-lib
-    popd
   else
-    sudo ${COMMAND} -y install java-1.8.0-openjdk-devel libstdc++-static
+    sudo ${COMMAND} -y install libstdc++-static
   fi
 }
 

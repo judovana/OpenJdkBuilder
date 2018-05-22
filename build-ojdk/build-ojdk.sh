@@ -33,20 +33,19 @@ function parseArgsAndSetGlobalVars() {
 
   SOURCE_DIR=${RAMDISK_DIR}/openjdk
   BUILDROOT=${RAMDISK_DIR}/buildroot
+  BOOTJDK_DIR=~/bootjdk
+  BOOTJDK_ARCHIVE_DIR=/mnt/shared/jdk-images/bootjdk/${OJDK_VERSION}
   SOURCE_ARCHIVE_DIR="${WORKSPACE_DIR}/rpms"
   SOURCE_ARCHIVE=`ls ${SOURCE_ARCHIVE_DIR}`
   BUILDSCRIPT=${WORKSPACE_DIR}/build.sh
   BUILD_RESULT=1
 
   LOGS_DIR=${RAMDISK_DIR}
+  OTHER_LOGS_ARCHIVE_DIR=${WORKSPACE_DIR}/other_logs
   LOG_ALL_FILEPATH=${LOGS_DIR}/build.all.log
   LOG_OUT_FILEPATH=${LOGS_DIR}/build.out.log
   LOG_ERR_FILEPATH=${LOGS_DIR}/build.err.log
   LOG_PATCH_FILEPATH=${LOGS_DIR}/jdk-patching.log
-
-  OJDK7=ojdk7
-  OJDK8=ojdk8
-  OJDK9=ojdk9
 }
 
 function includeOjdkFunctions() {
@@ -139,10 +138,16 @@ function archiveResults() {
     if [ ${BUILD_RESULT} -eq 0 ] && [ -d ${BUILT_IMAGE_DIR} ]; then
       tar -cJf ${BUILT_ARCHIVE_FILENAME} -C ${BUILT_IMAGE_DIR}/.. `basename ${BUILT_IMAGE_DIR}`
     else
-      touch ${BUILT_ARCHIVE_FILENAME}.FAILED
+      touch ${BUILT_ARCHIVE_FILENAME}
     fi
     cp ${RAMDISK_DIR}/*.log .
     cp ${BUILDSCRIPT} .
+
+    mkdir ${OTHER_LOGS_ARCHIVE_DIR}
+    find ${SOURCE_DIR} -name "*.log" -exec cp --parents {} ${OTHER_LOGS_ARCHIVE_DIR} \;
+    find ${BUILDROOT} -name "*.log" -exec cp --parents {} ${OTHER_LOGS_ARCHIVE_DIR} \;
+    tar czf other_logs.tar.gz ${OTHER_LOGS_ARCHIVE_DIR}
+
     # this should convert our big logs to truncated htmls
     rm -f *.html
     sh ${SCRIPT_DIR}/../jenkins/static/analyseLogs.sh build.???.log ???-patching.log
@@ -160,6 +165,17 @@ function prepareSources() {
   patchSources
 }
 
+function installBootJDK() {
+  rm -rf ${BOOTJDK_DIR}
+  mkdir -p ${BOOTJDK_DIR}
+  if isWindows; then
+    tar --strip-components=1 -xf ${BOOTJDK_ARCHIVE_DIR}/*win.tarxz -C ${BOOTJDK_DIR}
+  else
+    ARCH=$( uname -m )
+    tar --strip-components=1 -xf ${BOOTJDK_ARCHIVE_DIR}/*${ARCH}.tarxz -C ${BOOTJDK_DIR}
+  fi
+}
+
 function prepareBuild() {
   prepareLogs
   prepareBuildRoot
@@ -170,6 +186,7 @@ parseArgsAndSetGlobalVars "${@}"
 includeOjdkFunctions
 cleanup
 prepareSources
+installBootJDK
 installBuildDeps
 prepareBuild
 build

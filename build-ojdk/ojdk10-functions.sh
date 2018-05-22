@@ -1,9 +1,9 @@
 function prepareBuildArgs() {
   WIN_SET=
-  WIN_DEPS=
+  WIN_OPTS=
   DEBUG_OPTS=
   STATIC_OPTS=
-  BUILD_OPTS="--with-native-debug-symbols=zipped  --disable-warnings-as-errors --with-boot-jdk=${BOOTJDK_DIR} --enable-unlimited-crypto"
+  BUILD_OPTS="--with-native-debug-symbols=zipped --disable-warnings-as-errors --with-boot-jdk=${BOOTJDK_DIR} --enable-unlimited-crypto"
   BUILD_OPTS="${BUILD_OPTS} $@"
 
   if [[ ${SOURCE_ARCHIVE} = *.fastdebug.* ]] ; then
@@ -22,7 +22,7 @@ function prepareBuildArgs() {
 
   if isWindows; then
     WIN_SET="export TMP=C:\\\\Windows\\\\Temp && export TEMP=C:\\\\Windows\\\\Temp"
-    WIN_DEPS="--with-freetype=/home/tester/freetype-lib"
+    WIN_OPTS="--with-num-cores=2 --with-memory-size=2048 --with-freetype=/home/tester/freetype-lib"
   fi
 }
 
@@ -34,14 +34,14 @@ function generateBuildScript() {
   echo "#/bin/bash" >> ${BUILDSCRIPT}
   echo "# `date`" >> ${BUILDSCRIPT}
   echo "OPENJDK_SRC=${SOURCE_DIR}" >> ${BUILDSCRIPT}
-  echo "bash \${OPENJDK_SRC}/common/autoconf/autogen.sh" >> ${BUILDSCRIPT}
+  echo "bash \${OPENJDK_SRC}/make/autoconf/autogen.sh" >> ${BUILDSCRIPT}
 
   echo ${WIN_SET} >> ${BUILDSCRIPT}
 
   echo "bash \${OPENJDK_SRC}/configure \
     ${STATIC_OPTS} \
     ${DEBUG_OPTS} \
-    ${WIN_DEPS} \
+    ${WIN_OPTS} \
     ${BUILD_OPTS}" >> ${BUILDSCRIPT}
   echo "set +o pipefail" >> ${BUILDSCRIPT}
   echo "make all bootcycle-images docs" >> ${BUILDSCRIPT}
