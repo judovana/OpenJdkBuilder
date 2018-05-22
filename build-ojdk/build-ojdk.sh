@@ -30,6 +30,11 @@ function parseArgsAndSetGlobalVars() {
   else
     RAMDISK_DIR=/mnt/ramdisk
   fi
+  if [ ! -e "${RAMDISK_DIR}" ] ; then
+    echo "Warning RAMDISK_DIR=${RAMDISK_DIR}  do not exists. Swapping to temp:"
+    RAMDISK_DIR=`mktemp -d`
+    echo "RAMDISK_DIR=${RAMDISK_DIR}"
+  fi
 
   SOURCE_DIR=${RAMDISK_DIR}/openjdk
   BUILDROOT=${RAMDISK_DIR}/buildroot
