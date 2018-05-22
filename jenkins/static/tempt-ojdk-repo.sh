@@ -20,7 +20,7 @@ INIT_DIR=$PWD
 
 readonly REPO="$1"
 
-. $SCRIPT_DIR/../custom_run_wrappers/parts/initMachines.sh
+#. $SCRIPT_DIR/../custom_run_wrappers/parts/initMachines.sh
 
 readonly TARGET_DIR=$UPSTREAM_REPOS_PATH/$REPO
 
@@ -293,13 +293,16 @@ for archivePath in ${archivePaths} ; do
       DESTINATION=$master_user@$DESTINATION
     fi
   fi
-
-  scp -o StrictHostKeyChecking=no -P 9822 $archivePath $DESTINATION:
-  scp -o StrictHostKeyChecking=no -P 9822 logsAnalyse.log *.html $OLD_HEADS_FILE $NEW_HEADS_FILE $PATCH_FILE $hgLogs $DESTINATION:$archivePath/logs
+  if [ ! "x$NO_UPLOAD" == "xTRUE"  ] ; then
+    scp -o StrictHostKeyChecking=no -P 9822 $archivePath $DESTINATION:
+    scp -o StrictHostKeyChecking=no -P 9822 logsAnalyse.log *.html $OLD_HEADS_FILE $NEW_HEADS_FILE $PATCH_FILE $hgLogs $DESTINATION:$archivePath/logs
+  fi
 
 CUSTOM_ARCHES_FILE=$TARGET_DIR/arches-expected
   if [ -e $CUSTOM_ARCHES_FILE ] ; then
-    scp -o StrictHostKeyChecking=no -P 9822 $CUSTOM_ARCHES_FILE $DESTINATION:$archivePath/data
+    if [ ! "x$NO_UPLOAD" == "xTRUE"  ] ; then
+      scp -o StrictHostKeyChecking=no -P 9822 $CUSTOM_ARCHES_FILE $DESTINATION:$archivePath/data
+    fi
   fi
   set +x
 done
