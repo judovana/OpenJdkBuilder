@@ -64,6 +64,8 @@ elif [ $repo = java-1.8.0-openjdk-aarch64 ]; then
   local job=pull-ojdk8u-aarch64-static
 elif [ $repo = java-1.8.0-openjdk-aarch64-shenandoah ]; then
   local job=pull-ojdk8u-aarch64-shenandoah-static
+elif [ $repo = java-1.8.0-openjdk-shenandoah ]; then
+  local job=pull-ojdk8u-shenandoah-static
 elif [ $repo = java-9-openjdk ]; then
   local job=pull-ojdk9-static
 elif [ $repo = java-9-openjdk-dev ]; then
@@ -74,6 +76,8 @@ elif [ $repo = java-1.7.0-openjdk-forest-26 ]; then
   local job=pull-ojdk7-forest-26-static
 elif [ $repo = java-9-openjdk-updates ]; then
   local job=pull-ojdk9-updates-static
+elif [ $repo = java-10-openjdk ]; then
+  local job=pull-ojdk10-static
 elif [ $repo = java-X-openjdk ]; then
   local job=pull-ojdkX-static
 else
