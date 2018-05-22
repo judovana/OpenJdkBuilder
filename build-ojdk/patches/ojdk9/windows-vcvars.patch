@@ -1,0 +1,12 @@
+diff -r 3a64fdb24a8c common/autoconf/toolchain_windows.m4
+--- a/common/autoconf/toolchain_windows.m4	Wed Sep 27 17:35:57 2017 -0700
++++ b/common/autoconf/toolchain_windows.m4	Wed Jan 10 10:43:52 2018 +0100
+@@ -70,7 +70,7 @@
+     if test "x$OPENJDK_TARGET_CPU_BITS" = x32; then
+       VCVARSFILE="vc/bin/vcvars32.bat"
+     else
+-      VCVARSFILE="vc/bin/amd64/vcvars64.bat"
++      VCVARSFILE="vc/bin/x86_amd64/vcvarsx86_amd64.bat"
+     fi
+ 
+     BASIC_WINDOWS_REWRITE_AS_UNIX_PATH(VS_BASE)

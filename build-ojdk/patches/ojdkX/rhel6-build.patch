@@ -1,0 +1,81 @@
+diff -r 663f20fc5109 make/autoconf/configure.ac
+--- a/make/autoconf/configure.ac	Thu Feb 15 00:20:22 2018 +0100
++++ b/make/autoconf/configure.ac	Fri Mar 02 10:57:24 2018 +0100
+@@ -30,7 +30,7 @@
+ ###############################################################################
+ 
+ 
+-AC_PREREQ([2.69])
++AC_PREREQ([2.63])
+ AC_INIT(OpenJDK, jdk9, build-dev@openjdk.java.net,,http://openjdk.java.net)
+ 
+ AC_CONFIG_AUX_DIR([$TOPDIR/make/autoconf/build-aux])
+diff -r 663f20fc5109 make/autoconf/lib-std.m4
+--- a/make/autoconf/lib-std.m4  Thu Feb 15 00:20:22 2018 +0100
++++ b/make/autoconf/lib-std.m4  Fri Mar 02 10:57:24 2018 +0100
+@@ -33,15 +33,15 @@
+ [
+   # statically link libstdc++ before C++ ABI is stablized on Linux unless
+   # dynamic build is configured on command line.
+-  AC_ARG_WITH([stdc++lib], [AS_HELP_STRING([--with-stdc++lib=<static>,<dynamic>,<default>],
++  AC_ARG_WITH([stdcpplib], [AS_HELP_STRING([--with-stdcpplib=<static>,<dynamic>,<default>],
+       [force linking of the C++ runtime on Linux to either static or dynamic, default is static with dynamic as fallback])],
+       [
+-        if test "x$with_stdc__lib" != xdynamic && test "x$with_stdc__lib" != xstatic \
+-                && test "x$with_stdc__lib" != xdefault; then
+-          AC_MSG_ERROR([Bad parameter value --with-stdc++lib=$with_stdc__lib!])
++        if test "x$with_stdcpplib" != xdynamic && test "x$with_stdcpplib" != xstatic \
++                && test "x$with_stdcpplib" != xdefault; then
++          AC_MSG_ERROR([Bad parameter value --with-stdcpplib=$with_stdcpplib!])
+         fi
+       ],
+-      [with_stdc__lib=default]
++      [with_stdcpplib=default]
+   )
+ 
+   if test "x$OPENJDK_TARGET_OS" = xlinux; then
+@@ -58,14 +58,14 @@
+     AC_LANG_POP(C++)
+     AC_MSG_RESULT([$has_static_libstdcxx])
+ 
+-    if test "x$with_stdc__lib" = xstatic && test "x$has_static_libstdcxx" = xno; then
++    if test "x$with_stdcpplib" = xstatic && test "x$has_static_libstdcxx" = xno; then
+       AC_MSG_ERROR([Static linking of libstdc++ was not possible!])
+     fi
+ 
+     # If dynamic was requested, it's available since it would fail above otherwise.
+     # If dynamic wasn't requested, go with static unless it isn't available.
+     AC_MSG_CHECKING([how to link with libstdc++])
+-    if test "x$with_stdc__lib" = xdynamic || test "x$has_static_libstdcxx" = xno ; then
++    if test "x$with_stdcpplib" = xdynamic || test "x$has_static_libstdcxx" = xno ; then
+       AC_MSG_RESULT([dynamic])
+     else
+       LIBCXX="$LIBCXX $STATIC_STDCXX_FLAGS"
+diff -r b09e56145e11 src/hotspot/os/linux/os_linux.inline.hpp
+--- a/src/hotspot/os/linux/os_linux.inline.hpp  Thu Mar 08 04:23:31 2018 +0000
++++ b/src/hotspot/os/linux/os_linux.inline.hpp  Tue Mar 13 10:44:01 2018 +0100
+@@ -96,12 +96,12 @@
+   return ::ftruncate64(fd, length);
+ }
+ 
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+ inline struct dirent* os::readdir(DIR* dirp, dirent *dbuf)
+ {
+ // readdir_r has been deprecated since glibc 2.24.
+ // See https://sourceware.org/bugzilla/show_bug.cgi?id=19056 for more details.
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+ 
+   dirent* p;
+   int status;
+@@ -117,8 +117,8 @@
+   } else
+     return p;
+ 
++}
+ #pragma GCC diagnostic pop
+-}
+ 
+ inline int os::closedir(DIR *dirp) {
+   assert(dirp != NULL, "argument is NULL");

@@ -1,9 +1,9 @@
 function prepareBuildArgs() {
   WIN_SET=
-  WIN_DEPS=
+  WIN_OPTS=
   DEBUG_OPTS=
   STATIC_OPTS=
-  BUILD_OPTS="--with-native-debug-symbols=zipped  --disable-warnings-as-errors --with-boot-jdk=${BOOTJDK_DIR} --enable-unlimited-crypto"
+  BUILD_OPTS="--with-native-debug-symbols=zipped --disable-warnings-as-errors --with-boot-jdk=${BOOTJDK_DIR} --enable-unlimited-crypto"
   BUILD_OPTS="${BUILD_OPTS} $@"
 
   if [[ ${SOURCE_ARCHIVE} = *.fastdebug.* ]] ; then
@@ -22,7 +22,7 @@ function prepareBuildArgs() {
 
   if isWindows; then
     WIN_SET="export TMP=C:\\\\Windows\\\\Temp && export TEMP=C:\\\\Windows\\\\Temp"
-    WIN_DEPS="--with-freetype=/home/tester/freetype-lib"
+    WIN_OPTS="--with-freetype=bundled"
   fi
 }
 
@@ -34,16 +34,21 @@ function generateBuildScript() {
   echo "#/bin/bash" >> ${BUILDSCRIPT}
   echo "# `date`" >> ${BUILDSCRIPT}
   echo "OPENJDK_SRC=${SOURCE_DIR}" >> ${BUILDSCRIPT}
-  echo "bash \${OPENJDK_SRC}/common/autoconf/autogen.sh" >> ${BUILDSCRIPT}
+  echo "bash \${OPENJDK_SRC}/configure autogen \
+    ${STATIC_OPTS} \
+    ${DEBUG_OPTS} \
+    ${WIN_OPTS} \
+    ${BUILD_OPTS}" >> ${BUILDSCRIPT}
 
   echo ${WIN_SET} >> ${BUILDSCRIPT}
 
   echo "bash \${OPENJDK_SRC}/configure \
     ${STATIC_OPTS} \
     ${DEBUG_OPTS} \
-    ${WIN_DEPS} \
+    ${WIN_OPTS} \
     ${BUILD_OPTS}" >> ${BUILDSCRIPT}
   echo "set +o pipefail" >> ${BUILDSCRIPT}
+
   echo "make all bootcycle-images docs" >> ${BUILDSCRIPT}
 }
 
@@ -60,9 +65,7 @@ function installBuildDeps() {
     COMMAND=msiexec
   fi
 
-  if isWindows; then
-    cp -r /mnt/shared/jdk-images/windows_build_deps/freetype-lib /home/tester/freetype-lib
-  else
+  if isLinux; then
     sudo ${COMMAND} -y install libstdc++-static
   fi
 }

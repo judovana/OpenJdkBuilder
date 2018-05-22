@@ -1,0 +1,28 @@
+diff -r b09e56145e11 src/hotspot/os/linux/os_linux.inline.hpp
+--- a/src/hotspot/os/linux/os_linux.inline.hpp	Thu Mar 08 04:23:31 2018 +0000
++++ b/src/hotspot/os/linux/os_linux.inline.hpp	Tue Mar 13 10:44:01 2018 +0100
+@@ -96,12 +96,12 @@
+   return ::ftruncate64(fd, length);
+ }
+ 
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+ inline struct dirent* os::readdir(DIR* dirp, dirent *dbuf)
+ {
+ // readdir_r has been deprecated since glibc 2.24.
+ // See https://sourceware.org/bugzilla/show_bug.cgi?id=19056 for more details.
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+ 
+   dirent* p;
+   int status;
+@@ -117,8 +117,8 @@
+   } else
+     return p;
+ 
++}
+ #pragma GCC diagnostic pop
+-}
+ 
+ inline int os::closedir(DIR *dirp) {
+   assert(dirp != NULL, "argument is NULL");
