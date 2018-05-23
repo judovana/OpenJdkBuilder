@@ -20,6 +20,7 @@ INIT_DIR=$PWD
 
 readonly REPO="$1"
 
+# github only!!
 #. $SCRIPT_DIR/../custom_run_wrappers/parts/initMachines.sh
 
 readonly TARGET_DIR=$UPSTREAM_REPOS_PATH/$REPO
