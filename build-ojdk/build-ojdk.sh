@@ -162,7 +162,9 @@ function archiveResults() {
 
 function cleanup() {
   cleanRamdisk
-  cleanWorkspace
+  if [ ! "x$PRESERVE_BUILD_WORKSPACE" == "xTRUE" ] ; then
+    cleanWorkspace
+  fi
 }
 
 function prepareSources() {
@@ -171,6 +173,10 @@ function prepareSources() {
 }
 
 function installBootJDK() {
+  if [ ! "x$ALTERNATE_BOOT_JDK" == "x" ] ; then
+    BOOTJDK_DIR=$ALTERNATE_BOOT_JDK
+    return 0
+  fi
   rm -rf ${BOOTJDK_DIR}
   mkdir -p ${BOOTJDK_DIR}
   if isWindows; then
@@ -192,7 +198,8 @@ includeOjdkFunctions
 cleanup
 prepareSources
 installBootJDK
-installBuildDeps
+#github only!!!
+#installBuildDeps
 prepareBuild
 build
 archiveResults
